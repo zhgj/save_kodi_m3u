@@ -8,8 +8,8 @@ def getm3u(url, path):
     rqs = urllib.request.urlopen(url, timeout=120)
     html = rqs.read().decode()
     soup = BeautifulSoup(html, 'lxml')
-    atag = soup.find_all(lambda tag: tag.has_attr('href')
-                         and tag.has_attr('rel'))
+    atag = soup.find_all(lambda tag: tag.name == 'a' and tag.has_attr('href') and not tag.has_attr(
+        'class') and tag.has_attr('rel') and tag.attrs['rel'][0] == 'nofollow')
     for a in atag:
         m3u_url = a.attrs['href']
         if('.m3u' in m3u_url and len(a.attrs['rel']) == 1 and a.attrs['rel'][0] == 'nofollow'):
@@ -17,6 +17,7 @@ def getm3u(url, path):
             # file_name = m3u_url_arr[len(m3u_url_arr)-1]
             # chinese_file_name = urllib.parse.unquote(file_name)
             chinese_file_name = a.text[:-1]
+            print(m3u_url)
             m3u_rqs = urllib.request.urlopen(m3u_url, timeout=120)
             if '陕西电信' in chinese_file_name or '贵州联通' in chinese_file_name or '山东联通' in chinese_file_name:
                 content = m3u_rqs.read().decode(encoding='cp1252')
@@ -29,9 +30,32 @@ def getm3u(url, path):
 
 
 def getm3u_2(url, path):
+    # index
+    m3u_rqs = urllib.request.urlopen(
+        'https://iptv-org.github.io/iptv/index.m3u', timeout=120)
+    content = m3u_rqs.read().decode()
+    with open(path + '\\index.m3u', 'wt', encoding='utf-8') as f:
+        f.write(content)
+
     rqs = urllib.request.urlopen(url, timeout=120)
     html = rqs.read().decode()
     soup = BeautifulSoup(html, 'lxml')
+    uls = soup.find_all(lambda tag: tag.name ==
+                        'ul' and not tag.has_attr('class'))
+    for ul in uls:
+        codes = ul.find_all(name='code')
+        if(len(codes) <= 0):
+            continue
+        for code in codes:
+            m3u_url = code.text
+            m3u_url_arr = m3u_url.split('/')
+            print(m3u_url)
+            m3u_rqs = urllib.request.urlopen(m3u_url, timeout=120)
+            content = m3u_rqs.read().decode()
+            file_name = m3u_url_arr[len(m3u_url_arr)-1]
+            with open(path + '\\' + file_name, 'wt', encoding='utf-8') as f:
+                f.write(content)
+
     tables = soup.find_all(name='table')
     for index, table in enumerate(tables):
         path_folder = path + '\\Category' if index == 0 else (
@@ -45,6 +69,7 @@ def getm3u_2(url, path):
             m3u_url = tds[2].text
             m3u_url_arr = m3u_url.split('/')
             file_name = m3u_url_arr[len(m3u_url_arr)-1]
+            print(m3u_url)
             m3u_rqs = urllib.request.urlopen(m3u_url, timeout=120)
             content = m3u_rqs.read().decode()
             file_path = path_folder + '\\' + title + '_' + count + '_' + file_name
